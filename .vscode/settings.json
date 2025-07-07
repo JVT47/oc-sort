@@ -1,0 +1,12 @@
+{
+    "cSpell.words": [
+        "Deque",
+        "Kalman",
+        "kfilter",
+        "nalgebra"
+    ],
+    "[rust]": {
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "editor.formatOnSave": true,
+    },
+}

@@ -1,9 +1,16 @@
 {
     "cSpell.words": [
+        "bbox",
+        "bboxes",
         "Deque",
+        "iarea",
+        "iheight",
+        "iwidth",
         "Kalman",
         "kfilter",
-        "nalgebra"
+        "munkres",
+        "nalgebra",
+        "pathfinding"
     ],
     "[rust]": {
         "editor.defaultFormatter": "rust-lang.rust-analyzer",

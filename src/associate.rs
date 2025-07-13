@@ -3,7 +3,7 @@ use std::{collections::HashSet, f64::consts::PI};
 use crate::{bbox::BBox, kalman_box_tracker::KalmanBoxTracker, oc_sort_tracker::Detection};
 use pathfinding::prelude::{Matrix, kuhn_munkres_min};
 
-const IOU_MULTIPLIER: f64 = 1000.0;
+const IOU_MULTIPLIER: f64 = 10000.0;
 
 pub fn associate_detections_to_trackers(
     detections: &[Detection],
@@ -144,7 +144,7 @@ fn add_class_cost_matrix<D: AsRef<Detection>, K: AsRef<KalmanBoxTracker>>(
             let cost = if detection.as_ref().class == tracker.as_ref().class {
                 0
             } else {
-                i64::MAX
+                (100.0 * IOU_MULTIPLIER) as i64
             };
             cost_matrix[(i, j)] += cost;
         }
@@ -165,7 +165,37 @@ fn add_speed_cost_matrix(
             let diff_angle = inertia.dot(&speed_direction).acos();
             let diff_angle_cost = (diff_angle - PI) / PI;
 
-            cost_matrix[(i, j)] += (diff_angle_cost * 0.2 * 100.0) as i64;
+            cost_matrix[(i, j)] += (diff_angle_cost * 0.2 * IOU_MULTIPLIER) as i64;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_associate_detections_to_trackers_returns_correct_matching() {
+        let detections = vec![
+            Detection {
+                bbox: BBox::new(0.0, 0.0, 1.0, 1.0),
+                class: 0,
+            },
+            Detection {
+                bbox: BBox::new(2.0, 3.0, 4.0, 4.0),
+                class: 0,
+            },
+        ];
+
+        let trackers = vec![KalmanBoxTracker::new(BBox::new(0.5, 0.0, 1.5, 1.0), 3, 0)];
+
+        let iou_threshold = 0.3;
+
+        let (matched_indices, unmatched_detection_indices, unmatched_tracker_indices) =
+            associate_detections_to_trackers(&detections, &trackers, iou_threshold);
+
+        assert_eq!(matched_indices, vec![(0, 0)]);
+        assert_eq!(unmatched_detection_indices, vec![1]);
+        assert_eq!(unmatched_tracker_indices, Vec::<usize>::new());
     }
 }

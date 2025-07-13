@@ -41,6 +41,13 @@ impl OCSort {
     }
 
     pub fn update(&mut self, detections: &[Detection]) -> Vec<Track> {
+        self.trackers.iter_mut().for_each(|tracker| {
+            tracker.predict();
+        });
+
+        self.trackers
+            .retain(|tracker| tracker.time_since_update <= self.max_age);
+
         if self.trackers.is_empty() {
             detections.iter().for_each(|detection| {
                 self.trackers.push(KalmanBoxTracker::new(
@@ -52,16 +59,16 @@ impl OCSort {
             return self.get_trackers();
         }
 
-        self.trackers.iter_mut().for_each(|tracker| {
-            tracker.predict();
-        });
-
         if detections.is_empty() {
             return self.get_trackers();
         }
 
         let (matched_indices, unmatched_detection_indices, unmatched_tracker_indices) =
             associate_detections_to_trackers(&detections, &self.trackers, self.iou_threshold);
+
+        for (i, j) in matched_indices.iter() {
+            self.trackers[*j].update(detections[*i].bbox);
+        }
 
         let unmatched_detections = unmatched_detection_indices
             .iter()
@@ -79,9 +86,12 @@ impl OCSort {
             self.iou_threshold,
         );
 
-        for (i, j) in matched_indices.iter().chain(ocr_matched_indices.iter()) {
-            self.trackers[*j].update(detections[*i].bbox);
+        for (i, j) in ocr_matched_indices.iter() {
+            let tracker_index = unmatched_tracker_indices[*j];
+            let detection = unmatched_detections[*i];
+            self.trackers[tracker_index].update(detection.bbox);
         }
+
         for i in unmatched_detection_indices.iter() {
             let detection = unmatched_detections[*i];
             self.trackers.push(KalmanBoxTracker::new(
@@ -91,9 +101,79 @@ impl OCSort {
             ));
         }
 
-        self.trackers
-            .retain(|tracker| tracker.time_since_update <= self.max_age);
-
         self.get_trackers()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_update_reassociates_lost_object() {
+        let mut oc_sort_tracker = OCSort::new(5, 0.3, 3);
+        let detections = vec![Detection {
+            bbox: BBox::new(0.0, 0.0, 1.0, 1.0),
+            class: 1,
+        }];
+
+        oc_sort_tracker.update(&detections);
+        let detections = vec![Detection {
+            bbox: BBox::new(0.5, 0.0, 1.5, 1.0),
+            class: 1,
+        }];
+        oc_sort_tracker.update(&detections);
+
+        oc_sort_tracker.update(&Vec::new());
+
+        let detections = vec![Detection {
+            bbox: BBox::new(1.5, 0.0, 2.5, 1.0),
+            class: 1,
+        }];
+        let tracks = oc_sort_tracker.update(&detections);
+
+        assert_eq!(tracks.len(), 1);
+
+        let tolerance = 0.1;
+        let track = &tracks[0];
+        assert_eq!(track.id, 0);
+        assert_eq!(track.class, 1);
+        assert!((track.bbox.x_1 - 1.5).abs() <= tolerance);
+    }
+
+    #[test]
+    fn test_update_keeps_track_of_objects() {
+        let motorcycle_bboxes = vec![
+            BBox::new(187.0, 324.0, 303.0, 422.0),
+            BBox::new(183.0, 321.0, 302.0, 426.0),
+            BBox::new(180.0, 324.0, 303.0, 429.0),
+            BBox::new(179.0, 324.0, 303.0, 433.0),
+            BBox::new(168.0, 327.0, 305.0, 438.0),
+        ];
+
+        let person_bboxes = vec![
+            BBox::new(213.0, 280.0, 266.0, 402.0),
+            BBox::new(211.0, 278.0, 265.0, 403.0),
+            BBox::new(211.0, 278.0, 269.0, 406.0),
+            BBox::new(210.0, 276.0, 268.0, 405.0),
+            BBox::new(206.0, 277.0, 269.0, 408.0),
+        ];
+
+        let mut oc_sort_tracker = OCSort::new(5, 0.3, 3);
+
+        for i in 0..motorcycle_bboxes.len() {
+            let detections = vec![
+                Detection {
+                    bbox: motorcycle_bboxes[i],
+                    class: 3,
+                },
+                Detection {
+                    bbox: person_bboxes[i],
+                    class: 0,
+                },
+            ];
+            let tracks = oc_sort_tracker.update(&detections);
+            assert_eq!(tracks.len(), 2);
+        }
     }
 }

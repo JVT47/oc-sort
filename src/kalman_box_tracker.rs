@@ -137,6 +137,9 @@ impl KalmanBoxTracker {
                 * last_observation.bbox.to_observation_vector()
                 + t as f64 / steps_between as f64 * z;
             self.kalman_filter.update(z_interpolated);
+            if t < steps_between {
+                self.kalman_filter.predict();
+            }
         }
     }
 
@@ -165,5 +168,23 @@ mod tests {
     fn test_new_succeeds() {
         let bbox = BBox::new(1.0, 1.0, 2.0, 2.0);
         KalmanBoxTracker::new(bbox, 3, 0);
+    }
+
+    #[test]
+    fn test_predict_advances_bbox() {
+        let bbox_1 = BBox::new(0.0, 0.0, 1.0, 1.0);
+        let bbox_2 = BBox::new(0.5, 0.0, 1.5, 1.0);
+
+        let mut tracker = KalmanBoxTracker::new(bbox_1, 1, 1);
+        tracker.predict();
+        tracker.update(bbox_2);
+
+        let bbox_3 = tracker.predict();
+        let tolerance = 0.01;
+
+        assert!((bbox_3.x_1 - 1.0).abs() < tolerance);
+        assert!((bbox_3.y_1 - 0.0).abs() < tolerance);
+        assert!((bbox_3.x_2 - 2.0).abs() < tolerance);
+        assert!((bbox_3.y_2 - 1.0).abs() < tolerance);
     }
 }

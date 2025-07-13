@@ -4,6 +4,7 @@ use crate::{
     kalman_box_tracker::{KalmanBoxTracker, Track},
 };
 
+#[derive(Clone, Copy)]
 pub struct Detection {
     pub bbox: BBox,
     pub class: u32,
@@ -39,7 +40,7 @@ impl OCSort {
             .collect()
     }
 
-    pub fn update(&mut self, detections: Vec<Detection>) -> Vec<Track> {
+    pub fn update(&mut self, detections: &[Detection]) -> Vec<Track> {
         if self.trackers.is_empty() {
             detections.iter().for_each(|detection| {
                 self.trackers.push(KalmanBoxTracker::new(

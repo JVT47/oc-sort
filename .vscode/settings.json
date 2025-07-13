@@ -2,18 +2,24 @@
     "cSpell.words": [
         "bbox",
         "bboxes",
+        "cdylib",
         "Deque",
         "iarea",
         "iheight",
         "iwidth",
         "Kalman",
         "kfilter",
+        "maturin",
         "munkres",
         "nalgebra",
-        "pathfinding"
+        "pathfinding",
+        "pyclass",
+        "pymethods",
+        "pymodule"
     ],
     "[rust]": {
         "editor.defaultFormatter": "rust-lang.rust-analyzer",
         "editor.formatOnSave": true,
     },
+    "python.analysis.typeCheckingMode": "standard",
 }

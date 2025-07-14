@@ -6,6 +6,7 @@
         "Deque",
         "iarea",
         "iheight",
+        "itertools",
         "iwidth",
         "Kalman",
         "kfilter",
@@ -22,4 +23,8 @@
         "editor.formatOnSave": true,
     },
     "python.analysis.typeCheckingMode": "standard",
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,     
+    }
 }

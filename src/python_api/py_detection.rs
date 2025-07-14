@@ -10,11 +10,12 @@ pub struct PyDetection {
 #[pymethods]
 impl PyDetection {
     #[new]
-    pub fn new(bbox: &PyBBox, class_id: u32) -> Self {
+    pub fn new(bbox: &PyBBox, class_id: u32, score: f64) -> Self {
         Self {
             inner: Detection {
                 bbox: bbox.inner,
                 class: class_id,
+                score: score,
             },
         }
     }
@@ -29,5 +30,10 @@ impl PyDetection {
     #[getter]
     fn class_id(&self) -> u32 {
         self.inner.class
+    }
+
+    #[getter]
+    fn score(&self) -> f64 {
+        self.inner.score
     }
 }

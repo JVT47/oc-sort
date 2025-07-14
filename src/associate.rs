@@ -183,8 +183,8 @@ fn calculate_matching(
         let detection = &detections[detection_index];
         let tracker = &trackers[tracker_index];
 
-        let invalid_iou =
-            -iou_matrix[(detection_index, tracker_index)] < (iou_threshold * IOU_MULTIPLIER) as i64;
+        let invalid_iou = -iou_matrix[(detection_indices_index, tracker_indices_index)]
+            < (iou_threshold * IOU_MULTIPLIER) as i64;
         let invalid_class = detection.as_ref().class != tracker.as_ref().class;
 
         if invalid_iou || invalid_class {

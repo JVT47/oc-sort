@@ -24,23 +24,33 @@ pub struct OCSort {
     iou_threshold: f64,
     delta_t: u32,
     score_threshold: f64,
+    min_hit_streak: u32,
 }
 
 impl OCSort {
-    pub fn new(max_age: u32, iou_threshold: f64, delta_t: u32, score_threshold: f64) -> Self {
+    pub fn new(
+        max_age: u32,
+        iou_threshold: f64,
+        delta_t: u32,
+        score_threshold: f64,
+        min_hit_streak: u32,
+    ) -> Self {
         Self {
             trackers: Vec::new(),
             max_age,
             iou_threshold,
             delta_t,
             score_threshold,
+            min_hit_streak,
         }
     }
 
     pub fn get_trackers(&self) -> Vec<Track> {
         self.trackers
             .iter()
-            .filter(|tracker| tracker.time_since_update < 1)
+            .filter(|tracker| {
+                (tracker.time_since_update < 1) & (tracker.hit_streak >= self.min_hit_streak)
+            })
             .map(|tracker| tracker.get_state())
             .collect()
     }

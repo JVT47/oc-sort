@@ -28,6 +28,7 @@ pub struct KalmanBoxTracker {
         Kalman1M<f64, 7, 0, 4, LinearNoInputSystem<f64, 7>, LinearMeasurement<f64, 7, 4>>,
     id: u32,
     age: u32,
+    pub hit_streak: u32,
     prev_observations: VecDeque<Observation>,
     delta_t: u32,
     pub speed_direction: SVector<f64, 2>,
@@ -74,6 +75,7 @@ impl KalmanBoxTracker {
                 bbox,
             }]),
             age,
+            hit_streak: 1,
             delta_t,
             speed_direction: SVector::<f64, 2>::zeros(),
             class,
@@ -114,10 +116,14 @@ impl KalmanBoxTracker {
         self.update_kalman_filter(&bbox.to_observation_vector());
         self.add_bbox_to_observations(bbox);
         self.time_since_update = 0;
+        self.hit_streak += 1;
     }
 
     pub fn predict(&mut self) -> BBox {
         self.age += 1;
+        if self.time_since_update > 0 {
+            self.hit_streak = 0;
+        }
         self.time_since_update += 1;
         let state_vector = self.kalman_filter.predict();
 

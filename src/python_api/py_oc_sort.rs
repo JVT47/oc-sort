@@ -13,9 +13,21 @@ pub struct PyOCSort {
 #[pymethods]
 impl PyOCSort {
     #[new]
-    pub fn new(max_age: u32, iou_threshold: f64, delta_t: u32, score_threshold: f64) -> PyOCSort {
+    pub fn new(
+        max_age: u32,
+        iou_threshold: f64,
+        delta_t: u32,
+        score_threshold: f64,
+        min_hit_streak: u32,
+    ) -> PyOCSort {
         Self {
-            inner: OCSort::new(max_age, iou_threshold, delta_t, score_threshold),
+            inner: OCSort::new(
+                max_age,
+                iou_threshold,
+                delta_t,
+                score_threshold,
+                min_hit_streak,
+            ),
         }
     }
 

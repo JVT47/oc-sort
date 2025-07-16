@@ -16,31 +16,51 @@ struct Observation {
     bbox: BBox,
 }
 
+/// Represents a tracked object.
 #[derive(Debug)]
 pub struct Track {
+    /// Unique id of the object.
     pub id: u32,
+    /// The bounding box of the object.
     pub bbox: BBox,
+    /// The class id of the object.
     pub class: u32,
 }
 
+/// Struct that keeps track of an object with the use of a Kalman Filter.
 pub struct KalmanBoxTracker {
+    /// The age of the tracked object in time steps.
+    age: u32,
+    /// The class id of the object.
+    pub class: u32,
+    /// The time lag used for speed direction calculations.
+    delta_t: u32,
+    /// The number of consecutive associations.
+    pub hit_streak: u32,
+    /// The id of the tracker.
+    id: u32,
+    /// The Kalman Filter used to track the object.
     kalman_filter:
         Kalman1M<f64, 7, 0, 4, LinearNoInputSystem<f64, 7>, LinearMeasurement<f64, 7, 4>>,
-    id: u32,
-    age: u32,
-    pub hit_streak: u32,
+    /// The previous associations made.
     prev_observations: VecDeque<Observation>,
-    delta_t: u32,
+    /// The direction the object is going to.
     pub speed_direction: SVector<f64, 2>,
-    pub class: u32,
+    /// Time since last association.
     pub time_since_update: u32,
 }
 
 static ID_COUNTER: AtomicU32 = AtomicU32::new(0);
 
 impl KalmanBoxTracker {
+    /// Creates a new tracker for a given bounding box.
+    ///
+    /// ## Args:
+    ///  - bbox: The bounding box of the object.
+    ///  - class: The class id of the object.
+    ///  - delta_t: The time lag used for speed direction calculations.
     #[allow(non_snake_case)]
-    pub fn new(bbox: BBox, delta_t: u32, class: u32) -> Self {
+    pub fn new(bbox: BBox, class: u32, delta_t: u32) -> Self {
         let mut F = SMatrix::<f64, 7, 7>::identity();
         F[(0, 4)] = 1.0;
         F[(1, 5)] = 1.0;
@@ -83,10 +103,13 @@ impl KalmanBoxTracker {
         }
     }
 
+    /// Returns the bounding box of the last association made to a detection.
     pub fn get_last_observation(&self) -> &BBox {
         self.prev_observations.back().map(|obs| &obs.bbox).unwrap()
     }
 
+    /// Returns the observation bounding box of the tracker that is closest to delta_t
+    /// time steps away.
     pub fn get_observation_dt_time_steps_away(&self) -> &BBox {
         self.prev_observations
             .iter()
@@ -98,10 +121,12 @@ impl KalmanBoxTracker {
             .unwrap()
     }
 
+    /// Returns the tracker's current bounding box.
     pub fn get_bbox(&self) -> BBox {
         BBox::from_state_vector(*self.kalman_filter.state())
     }
 
+    /// Returns the Track representation of the currently tracked object.
     pub fn get_state(&self) -> Track {
         let bbox = BBox::from_state_vector(*self.kalman_filter.state());
         Track {
@@ -111,6 +136,7 @@ impl KalmanBoxTracker {
         }
     }
 
+    /// Updates the state estimation of the tracked object with the bounding box from a detection.
     pub fn update(&mut self, bbox: BBox) {
         self.update_speed_direction(&bbox);
         self.update_kalman_filter(&bbox.to_observation_vector());
@@ -119,6 +145,7 @@ impl KalmanBoxTracker {
         self.hit_streak += 1;
     }
 
+    /// Predicts the next state of the object. Returns the predicted bounding box.
     pub fn predict(&mut self) -> BBox {
         self.age += 1;
         if self.time_since_update > 0 {

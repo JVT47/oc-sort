@@ -3,8 +3,22 @@ use std::{collections::HashSet, f64::consts::PI};
 use crate::{bbox::BBox, kalman_box_tracker::KalmanBoxTracker, oc_sort_tracker::Detection};
 use pathfinding::prelude::{Matrix, kuhn_munkres_min};
 
+// used to convert small float to some large integer since
+// the weight matrix of the hungarian algorithm only
+// accepts integers.
 const IOU_MULTIPLIER: f64 = 10000.0;
 
+/// Associates the given detections to the given trackers.
+///
+/// ## Args
+///  - detections: Reference to all detections
+///  - detection_indices: The indices of the detections available for association.
+///  - trackers: Reference to all trackers.
+///  - tracker_indices: The indices of the trackers available for association.
+///  - iou_threshold: The minimum iou score needed for a valid association.
+///
+/// Takes into account iou scores, observation centric momentum
+/// and class similarity.
 pub fn associate_detections_to_trackers(
     detections: &[Detection],
     detection_indices: &[usize],
@@ -37,6 +51,15 @@ pub fn associate_detections_to_trackers(
     )
 }
 
+/// Runs BYTE association, i.e, associates the low score detections to the current
+/// position of the trackers by only considering iou and class similarity.
+///
+/// ## Args
+///  - detections: Reference to all detections.
+///  - detection_indices: The indices of detections with a low score.
+///  - trackers: Reference to all trackers.
+///  - tracker_indices: The indices of trackers available for association.
+///  - iou_threshold: The minimum iou score needed for a valid association.
 pub fn byte_associate(
     detections: &[Detection],
     detection_indices: &[usize],
@@ -75,6 +98,16 @@ pub fn byte_associate(
     )
 }
 
+/// Runs Observation Centric Recovery (OCR) association, i.e, associates
+/// detections to the last associations made by the trackers by only
+/// considering iou and class similarity.
+///
+/// ## Args
+///  - detections: Reference to all detections.
+///  - detection_indices: The indices of detections available for association.
+///  - trackers: Reference to all trackers.
+///  - tracker_indices: The indices of trackers available for association.
+///  - iou_threshold: The minimum iou score needed for a valid association.
 pub fn observation_centric_recovery(
     detections: &[Detection],
     detection_indices: &[usize],
@@ -251,34 +284,42 @@ fn add_speed_cost_matrix(
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-//     #[test]
-//     fn test_associate_detections_to_trackers_returns_correct_matching() {
-//         let detections = vec![
-//             Detection {
-//                 bbox: BBox::new(0.0, 0.0, 1.0, 1.0),
-//                 class: 0,
-//                 score: 0.7,
-//             },
-//             Detection {
-//                 bbox: BBox::new(2.0, 3.0, 4.0, 4.0),
-//                 class: 0,
-//                 score: 0.8,
-//             },
-//         ];
+    #[test]
+    fn test_associate_detections_to_trackers_returns_correct_matching() {
+        let detections = vec![
+            Detection {
+                bbox: BBox::new(0.0, 0.0, 1.0, 1.0),
+                class: 0,
+                score: 0.7,
+            },
+            Detection {
+                bbox: BBox::new(2.0, 3.0, 4.0, 4.0),
+                class: 0,
+                score: 0.8,
+            },
+        ];
+        let detection_indices = vec![0, 1];
 
-//         let trackers = vec![KalmanBoxTracker::new(BBox::new(0.5, 0.0, 1.5, 1.0), 3, 0)];
+        let trackers = vec![KalmanBoxTracker::new(BBox::new(0.5, 0.0, 1.5, 1.0), 0, 3)];
+        let tracker_indices = vec![0];
 
-//         let iou_threshold = 0.3;
+        let iou_threshold = 0.3;
 
-//         let (matched_indices, unmatched_detection_indices, unmatched_tracker_indices) =
-//             associate_detections_to_trackers(&detections, &trackers, iou_threshold);
+        let (matched_indices, unmatched_detection_indices, unmatched_tracker_indices) =
+            associate_detections_to_trackers(
+                &detections,
+                &detection_indices,
+                &trackers,
+                &tracker_indices,
+                iou_threshold,
+            );
 
-//         assert_eq!(matched_indices, vec![(0, 0)]);
-//         assert_eq!(unmatched_detection_indices, vec![1]);
-//         assert_eq!(unmatched_tracker_indices, Vec::<usize>::new());
-//     }
-// }
+        assert_eq!(matched_indices, vec![(0, 0)]);
+        assert_eq!(unmatched_detection_indices, vec![1]);
+        assert_eq!(unmatched_tracker_indices, Vec::<usize>::new());
+    }
+}

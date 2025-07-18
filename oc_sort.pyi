@@ -55,7 +55,12 @@ class OCSort:
     """The oc sort object tracker."""
 
     def __new__(
-        cls, max_age: int, iou_threshold: float, delta_t: int, score_threshold: float
+        cls,
+        max_age: int,
+        iou_threshold: float,
+        delta_t: int,
+        score_threshold: float,
+        min_hit_streak: int,
     ) -> OCSort:
         """Construct a new tracker.
 
@@ -64,6 +69,7 @@ class OCSort:
             - iou_threshold: the minimum iou score needed for a valid association between a tracked bbox and new observation.
             - delta_t: time difference used in velocity calculations.
             - score_threshold: the score threshold used for byte association.
+            - min_hit_streak: the minimum number of consecutive associations a track needs to be returned.
         """
 
     def get_trackers(self) -> list[Track]:
